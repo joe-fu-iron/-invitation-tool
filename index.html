@@ -3,772 +3,385 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>邀請卡與信封線上文字提案編輯器 (客戶專用)</title>
-    <!-- Tailwind CSS CDN -->
+    <title>邀請卡文字確認系統 - 雅世代創意工作群</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <!-- FontAwesome for icons -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #f3f4f6;
-        }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f1f5f9; }
         
-        /* 浮水印背景特效 */
-        .watermark-bg {
-            position: relative;
-            background: linear-gradient(135deg, #e6f4ea 0%, #f4fbf7 100%);
-            overflow: hidden;
-        }
-        .watermark-bg::before {
-            content: "活動主視覺";
-            position: absolute;
-            top: 50%;
-            left: 50%;
+        /* 雅世代 Logo 品牌樣式 */
+        .ysd-logo { font-family: 'Noto Sans TC', sans-serif; font-weight: 900; letter-spacing: -1px; }
+
+        /* 全域/區域底圖淡化示意 */
+        .ysd-watermark { position: relative; overflow: hidden; }
+        .ysd-watermark::before {
+            content: "YSD 雅世代創意工作群"; position: absolute; top: 50%; left: 50%;
             transform: translate(-50%, -50%) rotate(-15deg);
-            font-size: 4rem;
-            font-weight: 900;
-            color: rgba(74, 161, 98, 0.08);
-            white-space: nowrap;
-            pointer-events: none;
-            z-index: 1;
-            letter-spacing: 0.5rem;
+            font-size: 2.5rem; font-weight: 900; letter-spacing: 4px;
+            color: rgba(0, 0, 0, 0.02); white-space: nowrap; pointer-events: none; z-index: 0;
         }
 
-        .watermark-bg-pink {
-            position: relative;
-            background: linear-gradient(135deg, #ffeef2 0%, #fff7f9 100%);
-            overflow: hidden;
+        /* 內外頁指定淺底色 */
+        .bg-outer-pale { background-color: #fdfbf7; } /* 柔和米白/象牙色 */
+        .bg-inner-pale { background-color: #f7fafc; } /* 乾淨清爽淡藍白 */
+
+        /* 主視覺區塊淺色邊框說明 */
+        .main-visual-hint {
+            border: 2px dashed rgba(16, 185, 129, 0.12);
+            background: rgba(16, 185, 129, 0.01);
         }
-        .watermark-bg-pink::before {
-            content: "活動主視覺";
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-15deg);
-            font-size: 4rem;
-            font-weight: 900;
-            color: rgba(219, 39, 119, 0.07);
-            white-space: nowrap;
-            pointer-events: none;
-            z-index: 1;
-            letter-spacing: 0.5rem;
+        .main-visual-text {
+            color: rgba(16, 185, 129, 0.25); font-weight: 700; letter-spacing: 2px;
         }
 
-        /* 虛擬折線 */
-        .fold-line {
-            position: relative;
-        }
-        .fold-line::after {
-            content: "【折線】";
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            background-color: #f3f4f6;
-            padding: 2px 10px;
-            color: #9ca3af;
-            font-size: 11px;
-            border-radius: 9999px;
-            border: 1px dashed #d1d5db;
-            z-index: 10;
-        }
+        /* 旋轉邏輯：編輯模式 vs 預覽模式 */
+        .outer-top-half { transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: center; }
+        .is-editing .outer-top-half { transform: rotate(0deg); } 
+        .is-preview .outer-top-half { transform: rotate(180deg); } 
 
-        /* 輸入框樣式優化 */
-        .editable-input {
-            transition: all 0.2s;
-            border: 1px dashed transparent;
-            border-radius: 4px;
-        }
-        .editable-input:hover {
-            border-color: #10b981;
-            background-color: rgba(230, 244, 234, 0.7);
-        }
-        .editable-input:focus {
-            border-color: #059669;
-            background-color: #ffffff;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
-            border-style: solid;
-        }
+        /* 可移動物件 */
+        .draggable { cursor: move; position: absolute; z-index: 10; transition: border 0.2s; border: 1px dashed transparent; }
+        .draggable:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
+        .draggable:active { cursor: grabbing; }
 
-        .editable-input-pink:hover {
-            border-color: #ec4899;
-            background-color: rgba(254, 242, 242, 0.7);
+        .editable-input { background: transparent; border: none; outline: none; width: 100%; }
+
+        /* 立體示意圖 CSS 3D */
+        .scene { perspective: 1000px; }
+        .card-3d { 
+            width: 300px; height: 200px; position: relative; transform-style: preserve-3d;
+            transition: transform 1s; transform: rotateX(20deg) rotateY(-20deg);
         }
-        .editable-input-pink:focus {
-            border-color: #db2777;
-            background-color: #ffffff;
-            outline: none;
-            box-shadow: 0 0 0 3px rgba(236, 72, 153, 0.2);
-            border-style: solid;
-        }
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 1px solid #e2e8f0; }
+        .card-bottom { background: #fdfbf7; transform: rotateX(-90deg) translateZ(100px); }
+        .card-front { background: #fdfbf7; transform: translateZ(100px); transform-origin: top; transition: transform 1s; }
+        .scene:hover .card-front { transform: rotateX(-160deg) translateZ(100px); }
+
+        @media print { .no-print { display: none; } }
     </style>
 </head>
-<body class="min-h-screen text-gray-800 flex flex-col">
+<body class="min-h-screen text-gray-800 flex flex-col is-editing">
 
-    <!-- 頂部導覽列 -->
-    <header class="bg-gradient-to-r from-emerald-600 to-teal-700 text-white shadow-lg sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-white text-emerald-600 p-2 rounded-lg font-black text-xl shadow-inner">
-                    <i class="fa-solid fa-file-signature"></i> CARD
+    <!-- 頂部列 -->
+    <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-4">
+                <div class="ysd-logo text-2xl flex items-center gap-1">
+                    <span class="bg-black text-white px-2 py-0.5 rounded">雅世代</span>
+                    <span class="text-gray-500 font-light text-sm tracking-widest ml-1">創意工作群</span>
                 </div>
-                <div>
-                    <h1 class="text-xl font-bold tracking-wider">邀請卡客戶線上文字確認提案系統</h1>
-                    <p class="text-xs text-emerald-100">快速填寫、即時預覽、一鍵定稿匯出</p>
-                </div>
+                <div class="h-6 w-px bg-gray-300 mx-2"></div>
+                <h1 class="text-lg font-black tracking-wide bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                    邀請卡文字確認系統
+                </h1>
             </div>
             
-            <div class="flex gap-2">
-                <button onclick="loadTemplate('default')" class="bg-emerald-800 hover:bg-emerald-900 text-white text-sm font-medium px-3 py-1.5 rounded transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-rotate"></i> 重設預設範例 (水梨節)
+            <div class="flex gap-2 no-print">
+                <button onclick="toggleRotation()" class="bg-blue-50 text-blue-600 text-sm font-bold px-4 py-2 rounded-lg border border-blue-200 hover:bg-blue-100 transition">
+                    <i class="fa-solid fa-arrows-rotate"></i> 切換列印/編輯方向
                 </button>
-                <button onclick="clearAllFields()" class="bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium px-3 py-1.5 rounded transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-eraser"></i> 清空文字
+                <button onclick="clearAllFields()" class="text-gray-400 hover:text-red-500 transition px-2" title="重設欄位">
+                    <i class="fa-solid fa-trash-can"></i>
                 </button>
             </div>
         </div>
     </header>
 
-    <!-- 操作提示說明 -->
-    <div class="bg-emerald-50 border-b border-emerald-100 text-emerald-800 px-4 py-3">
-        <div class="max-w-5xl mx-auto flex items-start gap-3 text-sm">
-            <span class="flex-shrink-0 bg-emerald-500 text-white w-5 h-5 rounded-full flex items-center justify-center font-bold">!</span>
-            <div>
-                <p class="font-semibold">親愛的客戶您好：</p>
-                <p class="text-emerald-700 mt-0.5">
-                    以下卡片的所有<b>文字與長官名單、記者會時間表</b>均為「可編輯輸入框」。您可直接在想要修改的字體上點選並輸入您真正的活動資訊。
-                    底圖的所有精美背景與插畫區塊在設計階段已用<b>【活動主視覺】浮水印</b>佔位替代。文字定案後，我們將為您套入正式主視覺。
-                </p>
-            </div>
+    <!-- 分頁導覽 -->
+    <nav class="bg-white border-b border-gray-200 sticky top-[65px] z-40 no-print">
+        <div class="max-w-3xl mx-auto px-4 flex justify-around">
+            <button onclick="switchTab('tab-outer')" id="btn-tab-outer" class="tab-btn py-4 px-6 border-b-2 border-blue-600 text-blue-600 font-bold">1. 外頁(封面/封底)</button>
+            <button onclick="switchTab('tab-inner')" id="btn-tab-inner" class="tab-btn py-4 px-6 border-b-2 border-transparent text-gray-500 hover:text-blue-600">2. 內頁展面</button>
+            <button onclick="switchTab('tab-envelope')" id="btn-tab-envelope" class="tab-btn py-4 px-6 border-b-2 border-transparent text-gray-500 hover:text-blue-600">3. 粉紅信封</button>
         </div>
-    </div>
+    </nav>
 
-    <!-- 分頁導覽按鈕 & 匯出動作列 -->
-    <div class="sticky top-[72px] bg-white border-b border-gray-200 shadow-sm z-40 py-2">
-        <div class="max-w-6xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4">
-            <!-- Tabs -->
-            <div class="flex bg-gray-100 p-1.5 rounded-xl w-full md:w-auto overflow-x-auto">
-                <button onclick="switchTab('tab-outer')" id="btn-tab-outer" class="tab-btn flex-1 md:flex-none text-sm font-bold px-5 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 bg-white text-emerald-700 shadow-sm">
-                    <i class="fa-solid fa-map"></i> 1. 邀請卡 - 外頁 (封面/封底)
-                </button>
-                <button onclick="switchTab('tab-inner')" id="btn-tab-inner" class="tab-btn flex-1 md:flex-none text-sm font-bold px-5 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-gray-600 hover:text-emerald-600">
-                    <i class="fa-solid fa-book-open"></i> 2. 邀請卡 - 內頁 (致邀內容/流程)
-                </button>
-                <button onclick="switchTab('tab-envelope')" id="btn-tab-envelope" class="tab-btn flex-1 md:flex-none text-sm font-bold px-5 py-2 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 text-gray-600 hover:text-emerald-600">
-                    <i class="fa-solid fa-envelope"></i> 3. 粉紅色信封套 (郵寄版面)
-                </button>
-            </div>
-
-            <!-- Export Buttons -->
-            <div class="flex gap-2 w-full md:w-auto">
-                <button onclick="exportData()" class="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-2.5 rounded-lg shadow transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-floppy-disk"></i> 一鍵定稿 (複製文字/匯出)
-                </button>
-                <button onclick="window.print();" class="bg-gray-700 hover:bg-gray-800 text-white font-bold px-4 py-2.5 rounded-lg shadow transition flex items-center justify-center gap-2">
-                    <i class="fa-solid fa-print"></i> 列印 / 存成PDF
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 主要編輯區域 -->
     <main class="flex-grow max-w-6xl w-full mx-auto p-4 md:p-8">
         
-        <!-- ==================== TAB 1: 外頁 ==================== -->
+        <!-- Tab 1: 外頁 (淺底色 bg-outer-pale) -->
         <div id="tab-outer" class="tab-content block">
-            <div class="mb-6 text-center">
-                <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">邀請卡外頁 (長卡對折 - 上下對折)</span>
-                <p class="text-sm text-gray-500 mt-1">上方為倒立摺回來的封面，中間為折線，下方為展開後的封底。</p>
-            </div>
-            
-            <div class="max-w-[550px] mx-auto bg-white border border-gray-300 shadow-2xl rounded-2xl overflow-hidden">
-                <!-- 邀請卡外頁上半部 (封面折疊頁 - 在平面展示時為倒置 180度 以便對折後呈現正面) -->
-                <div class="watermark-bg border-b border-gray-200 p-8 flex flex-col justify-between min-h-[380px] transform rotate-180 select-none relative">
-                    <!-- 上半部頂端 (折疊後在底層) -->
-                    <div class="text-center">
-                        <input type="text" id="outer-back-title" value="誠 摯 邀 請 INVITATION" class="editable-input text-center text-pink-600 font-black text-2xl tracking-widest bg-transparent w-full pointer-events-auto">
+            <div class="max-w-[500px] mx-auto border border-gray-300 shadow-2xl rounded-sm overflow-hidden">
+                
+                <!-- 外頁上方：封底/摺疊上半區 -->
+                <div class="outer-top-half ysd-watermark bg-outer-pale main-visual-hint h-[400px] relative overflow-hidden">
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span class="main-visual-text text-xl">活動主視覺（背面區）</span>
                     </div>
 
-                    <!-- 封面大主題 (主視覺浮水印中) -->
-                    <div class="my-auto text-center py-4">
-                        <div class="inline-block bg-white/80 backdrop-blur-sm px-6 py-4 rounded-xl border border-emerald-100 shadow-sm pointer-events-auto w-full">
-                            <input type="text" id="outer-main-title" value="甘甜蜜意豐貓梨" class="editable-input text-center text-emerald-800 font-extrabold text-3xl tracking-widest bg-transparent w-full">
-                            <input type="text" id="outer-sub-title" value="2025苗栗水果節" class="editable-input text-center text-emerald-600 font-bold text-lg tracking-wider bg-transparent w-full mt-2">
-                        </div>
+                    <!-- 可移動：誠摯邀請 -->
+                    <div class="draggable p-2 w-auto" style="top: 40px; left: 140px;" id="drag-invitation">
+                        <input type="text" id="outer-back-title" value="誠 摯 邀 請 INVITATION" class="editable-input text-center text-pink-600 font-bold text-xl tracking-widest">
                     </div>
 
-                    <!-- 上半部插畫佔位區 -->
-                    <div class="flex justify-between items-end text-xs text-gray-400 mt-2">
-                        <div class="border border-dashed border-gray-300 p-1 rounded bg-white/60">[活動主視覺插畫佔位 A]</div>
-                        <div class="border border-dashed border-gray-300 p-1 rounded bg-white/60">[活動主視覺插畫佔位 B]</div>
+                    <!-- 可移動：主題框 -->
+                    <div class="draggable bg-white/95 backdrop-blur-sm p-6 border border-amber-100 shadow-md rounded-lg" style="top: 150px; left: 50px; width: 400px;" id="drag-title-box">
+                        <input type="text" id="outer-main-title" value="甘甜蜜意豐貓梨" class="editable-input text-center text-emerald-800 font-black text-4xl tracking-tighter mb-2">
+                        <input type="text" id="outer-sub-title" value="2025苗栗水果節" class="editable-input text-center text-emerald-600 font-bold text-xl tracking-widest">
                     </div>
                 </div>
 
-                <!-- 虛擬折線 -->
-                <div class="fold-line h-px border-t-2 border-dashed border-gray-400 my-0 bg-gray-100 py-3"></div>
+                <!-- 中央折線 -->
+                <div class="relative h-px bg-dashed border-t border-dashed border-gray-400 no-print flex justify-center items-center z-30">
+                    <span class="absolute bg-white text-[10px] text-gray-400 font-mono px-3 py-0.5 rounded-full border border-gray-200 shadow-sm">
+                        <i class="fa-solid fa-scissors mr-1"></i> 中央折線 (K線與摺疊結構示意)
+                    </span>
+                </div>
 
-                <!-- 邀請卡外頁下半部 (封底 / 指導主協辦單位) -->
-                <div class="watermark-bg p-8 flex flex-col justify-between min-h-[380px]">
-                    <!-- 中間大片主視覺示意區 -->
-                    <div class="my-auto flex flex-col items-center justify-center border-2 border-dashed border-emerald-200/50 rounded-2xl p-6 bg-white/40 min-h-[160px] text-center">
-                        <i class="fa-solid fa-leaf text-emerald-500 text-3xl mb-2"></i>
-                        <span class="text-emerald-800 font-bold text-lg">【此處將呈現：正式活動主視覺插圖】</span>
-                        <span class="text-gray-400 text-xs mt-1">(包含豐水梨主體、採梨農夫、滿滿的苗栗果園溫馨氛圍)</span>
+                <!-- 外頁下方：封面/主要正面區 -->
+                <div class="ysd-watermark bg-outer-pale main-visual-hint h-[400px] p-10 flex flex-col justify-between relative">
+                    <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
+                        <span class="main-visual-text text-xl">活動主視覺（正面區）</span>
                     </div>
 
-                    <!-- 封底最下方的單位資料區 -->
-                    <div class="mt-8 space-y-2 bg-white/90 backdrop-blur-sm p-4 rounded-xl border border-emerald-100 text-sm">
-                        <div class="flex">
-                            <span class="font-bold text-emerald-700 w-24 flex-shrink-0">指導單位：</span>
-                            <input type="text" id="outer-guide-org" value="苗栗縣政府、苗栗縣三灣鄉公所" class="editable-input text-gray-700 bg-transparent w-full">
-                        </div>
-                        <div class="flex">
-                            <span class="font-bold text-emerald-700 w-24 flex-shrink-0">主辦單位：</span>
-                            <input type="text" id="outer-main-org" value="三灣鄉農會" class="editable-input text-gray-700 bg-transparent w-full">
-                        </div>
-                        <div class="flex">
-                            <span class="font-bold text-emerald-700 w-24 flex-shrink-0">協辦單位：</span>
-                            <input type="text" id="outer-co-org" value="三灣鄉民代表會、鄉內各機關團體" class="editable-input text-gray-700 bg-transparent w-full">
-                        </div>
-                        <div class="flex">
-                            <span class="font-bold text-emerald-700 w-24 flex-shrink-0">廣告標註：</span>
-                            <input type="text" id="outer-ad-tag" value="廣告" class="editable-input text-gray-400 text-xs bg-transparent w-full">
-                        </div>
+                    <div></div> 
+                    
+                    <!-- 單位資訊 -->
+                    <div class="bg-white/95 backdrop-blur-sm p-6 rounded-lg space-y-2 text-sm border border-gray-100 shadow-md relative z-10">
+                        <div class="flex"><span class="font-bold w-20 text-gray-500">指導單位</span><input type="text" id="outer-guide-org" value="苗栗縣政府、三灣鄉公所" class="editable-input font-medium text-gray-700"></div>
+                        <div class="flex"><span class="font-bold w-20 text-gray-500">主辦單位</span><input type="text" id="outer-main-org" value="三灣鄉農會" class="editable-input font-medium text-gray-700"></div>
+                        <div class="flex"><span class="font-bold w-20 text-gray-500">協辦單位</span><input type="text" id="outer-co-org" value="各級民意代表、家政班" class="editable-input font-medium text-gray-700"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- ==================== TAB 2: 內頁 ==================== -->
+        <!-- Tab 2: 內頁展面 (淺底色 bg-inner-pale) -->
         <div id="tab-inner" class="tab-content hidden">
-            <div class="mb-6 text-center">
-                <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">邀請卡內頁 (對開展開面)</span>
-                <p class="text-sm text-gray-500 mt-1">上方為長官致邀內容，中間為折線，下方為記者會活動流程安排。</p>
-            </div>
-
-            <div class="max-w-[550px] mx-auto bg-white border border-gray-300 shadow-2xl rounded-2xl overflow-hidden">
-                <!-- 內頁上半部 (致邀主旨/時間地點/長官名單) -->
-                <div class="watermark-bg p-8 border-b border-gray-200 min-h-[460px] flex flex-col justify-between">
-                    <!-- 致邀主文 -->
-                    <div class="text-center space-y-3 bg-white/70 backdrop-blur-sm p-4 rounded-xl border border-emerald-100">
-                        <div class="flex justify-center items-center gap-1.5 text-xs text-emerald-700 font-bold mb-1">
-                            <i class="fa-solid fa-calendar-day"></i>
-                            <input type="text" id="inner-invitation-head" value="謹訂於民國114年7月22日（二）上午10點" class="editable-input text-center text-sm font-bold bg-transparent w-full">
-                        </div>
-                        <div class="flex justify-center items-center gap-1.5 text-xs text-emerald-700 font-bold">
-                            <i class="fa-solid fa-location-dot"></i>
-                            <input type="text" id="inner-invitation-loc" value="假 苗栗縣政府大廳 舉辦" class="editable-input text-center text-sm font-bold bg-transparent w-full">
-                        </div>
-                        <div class="pt-2 border-t border-dashed border-emerald-100">
-                            <input type="text" id="inner-event-name-1" value="114年度苗栗縣豐水梨果品評鑑競賽頒獎暨行銷活動" class="editable-input text-center text-emerald-900 font-black text-md bg-transparent w-full">
-                            <input type="text" id="inner-event-name-2" value="2025苗栗水果節 甘甜蜜意豐貓梨" class="editable-input text-center text-emerald-700 font-bold text-sm bg-transparent w-full mt-1">
-                        </div>
-                        <div class="text-pink-600 font-bold text-sm tracking-widest pt-1">
-                            <input type="text" id="inner-welcome-tag" value="敬祈撥冗 蒞臨指導" class="editable-input text-center bg-transparent w-full">
-                        </div>
+            <div class="max-w-[500px] mx-auto border border-gray-300 shadow-2xl rounded-sm overflow-hidden">
+                <!-- 內頁上方：致邀內文 -->
+                <div class="ysd-watermark bg-inner-pale p-10 min-h-[420px] flex flex-col justify-center relative">
+                    <div class="text-center space-y-4 relative z-10">
+                        <input type="text" value="謹訂於民國114年7月22日(星期二) 上午10點" class="editable-input text-emerald-800 font-bold text-center text-base">
+                        <input type="text" value="假 苗栗縣政府一樓大廳 舉辦" class="editable-input text-emerald-800 font-bold text-center text-base">
+                        <div class="h-px bg-emerald-200 my-4 w-1/2 mx-auto"></div>
+                        <input type="text" value="2025苗栗縣豐水梨評鑑頒獎" class="editable-input text-2xl font-black text-gray-900 text-center tracking-wide">
+                        <input type="text" value="暨果品優質行銷推廣記者會" class="editable-input text-2xl font-black text-gray-900 text-center tracking-wide mb-2">
+                        <input type="text" value="敬祈撥冗 蒞臨指導" class="editable-input text-pink-600 font-bold tracking-widest text-center text-base">
                     </div>
-
-                    <!-- 長官敬邀聯名名單 (動態卡片) -->
-                    <div class="mt-6 bg-white/85 backdrop-blur-sm p-4 rounded-xl border border-emerald-100 text-xs">
-                        <!-- 動態網格容器 -->
-                        <div id="officers-container" class="grid grid-cols-2 gap-x-4 gap-y-2">
-                            <!-- 預設長官資料項目，職稱與姓名均改為 input -->
-                            <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                                <input type="text" value="苗栗縣縣長" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                                <input type="text" value="鍾東錦" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                            </div>
-                            <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                                <input type="text" value="三灣鄉鄉長" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                                <input type="text" value="李運光" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                            </div>
-                            <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                                <input type="text" value="立法委員" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                                <input type="text" value="邱鎮軍" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                            </div>
-                            <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                                <input type="text" value="三灣鄉農會理事長" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                                <input type="text" value="賴元鳳" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                            </div>
-                            <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                                <input type="text" value="苗栗縣議會議長" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                                <input type="text" value="李文斌" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                            </div>
-                            <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                                <input type="text" value="三灣鄉農會常務監事" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                                <input type="text" value="廖盛榮" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                            </div>
-                            <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                                <input type="text" value="三灣鄉民代表會主席" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                                <input type="text" value="邱騰森" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                            </div>
-                            <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                                <input type="text" value="三灣鄉農會總幹事" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                                <input type="text" value="謝杏玲" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                            </div>
-                        </div>
-
-                        <!-- 增刪長官名單按鈕 (僅在非列印狀態顯示) -->
-                        <div class="mt-3 flex justify-end gap-1.5 no-print">
-                            <button onclick="addOfficer()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs px-2.5 py-1 rounded transition flex items-center gap-1">
-                                <i class="fa-solid fa-user-plus"></i> ➕ 新增長官
-                            </button>
-                            <button onclick="removeOfficer()" class="bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs px-2.5 py-1 rounded transition flex items-center gap-1">
-                                <i class="fa-solid fa-user-minus"></i> ➖ 刪除最後一位
-                            </button>
-                        </div>
-
-                        <!-- 敬邀按鈕樣式 -->
-                        <div class="flex justify-center mt-3 pt-2 border-t border-emerald-50">
-                            <span class="bg-pink-600 text-white rounded-full font-bold px-4 py-1 text-xs shadow-sm tracking-widest">
-                                <input type="text" id="inner-invite-badge" value="敬邀" class="text-center bg-transparent w-12 text-white font-bold outline-none">
-                            </span>
-                        </div>
+                    
+                    <!-- 內頁長官名單：完美照圖檔對齊 -->
+                    <div id="officers-container" class="grid grid-cols-2 gap-x-6 gap-y-2 mt-8 relative z-10 bg-white/60 p-4 rounded-lg border border-gray-100">
+                        <div class="officer-item border-b border-gray-200/60 flex gap-1"><input type="text" value="苗栗縣縣長" class="w-32 text-gray-500 text-xs outline-none"><input type="text" value="鍾東錦" class="font-bold text-sm text-blue-900 outline-none"></div>
+                        <div class="officer-item border-b border-gray-200/60 flex gap-1"><input type="text" value="三灣鄉鄉長" class="w-32 text-gray-500 text-xs outline-none"><input type="text" value="李運光" class="font-bold text-sm text-blue-900 outline-none"></div>
+                        
+                        <div class="officer-item border-b border-gray-200/60 flex gap-1"><input type="text" value="立 法 委 員" class="w-32 text-gray-500 text-xs outline-none"><input type="text" value="邱鎮軍" class="font-bold text-sm text-blue-900 outline-none"></div>
+                        <div class="officer-item border-b border-gray-200/60 flex gap-1"><input type="text" value="三灣鄉農會理事長" class="w-32 text-gray-500 text-xs outline-none"><input type="text" value="賴元鳳" class="font-bold text-sm text-blue-900 outline-none"></div>
+                        
+                        <div class="officer-item border-b border-gray-200/60 flex gap-1"><input type="text" value="苗栗縣議會議長" class="w-32 text-gray-500 text-xs outline-none"><input type="text" value="李文斌" class="font-bold text-sm text-blue-900 outline-none"></div>
+                        <div class="officer-item border-b border-gray-200/60 flex gap-1"><input type="text" value="三灣鄉農會常務監事" class="w-32 text-gray-500 text-xs outline-none"><input type="text" value="廖盛榮" class="font-bold text-sm text-blue-900 outline-none"></div>
+                        
+                        <div class="officer-item border-b border-gray-200/60 flex gap-1"><input type="text" value="三灣鄉民代表會主席" class="w-32 text-gray-500 text-xs outline-none"><input type="text" value="邱騰森" class="font-bold text-sm text-blue-900 outline-none"></div>
+                        <div class="officer-item border-b border-gray-200/60 flex gap-1"><input type="text" value="三灣鄉農會總幹事" class="w-32 text-gray-500 text-xs outline-none"><input type="text" value="謝杏玲" class="font-bold text-sm text-blue-900 outline-none"></div>
+                    </div>
+                    <div class="mt-2 no-print flex justify-end relative z-10">
+                        <button onclick="addOfficer()" class="text-[11px] bg-white text-gray-500 hover:bg-gray-100 border border-gray-200 px-2 py-0.5 rounded transition">+ 增長官</button>
                     </div>
                 </div>
 
-                <!-- 虛擬折線 -->
-                <div class="fold-line h-px border-t-2 border-dashed border-gray-400 my-0 bg-gray-100 py-3"></div>
+                <!-- 內頁中央折線說明 -->
+                <div class="relative h-px bg-dashed border-t border-dashed border-gray-300 no-print flex justify-center items-center">
+                    <span class="absolute bg-gray-50 text-[9px] text-gray-400 font-mono px-2 py-0.5 rounded-full">內頁折線</span>
+                </div>
 
-                <!-- 內頁下半部 (流程時間表) -->
-                <div class="watermark-bg p-6 md:p-8 min-h-[460px] flex flex-col justify-between">
-                    <div class="bg-white/90 backdrop-blur-sm p-4 rounded-xl border border-emerald-100">
-                        <div class="text-emerald-800 font-bold text-md mb-3 flex items-center gap-2 border-b border-emerald-100 pb-2">
-                            <i class="fa-solid fa-list-check"></i>
-                            <input type="text" id="inner-flow-title" value="記者會流程" class="editable-input font-bold text-emerald-800 bg-transparent w-40">
-                        </div>
-
-                        <!-- 流程圖表 -->
-                        <div class="overflow-hidden rounded-lg border border-emerald-100">
-                            <table class="w-full text-center text-xs">
-                                <thead>
-                                    <tr class="bg-teal-600 text-white font-semibold">
-                                        <th class="py-2.5 w-1/3 border-r border-teal-500">時間</th>
-                                        <th class="py-2.5 w-2/3">單元</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="flow-tbody" class="divide-y divide-emerald-50">
-                                    <tr class="hover:bg-emerald-50/50 bg-amber-50/50 transition">
-                                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:00-10:02" class="editable-input text-center w-full bg-transparent"></td>
-                                        <td class="py-2 px-2"><input type="text" value="主持人開場" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                                    </tr>
-                                    <tr class="hover:bg-emerald-50/50 transition">
-                                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:02-10:07" class="editable-input text-center w-full bg-transparent"></td>
-                                        <td class="py-2 px-2"><input type="text" value="開場表演" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                                    </tr>
-                                    <tr class="hover:bg-emerald-50/50 bg-amber-50/50 transition">
-                                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:07-10:12" class="editable-input text-center w-full bg-transparent"></td>
-                                        <td class="py-2 px-2"><input type="text" value="介紹貴賓" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                                    </tr>
-                                    <tr class="hover:bg-emerald-50/50 transition">
-                                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:12-10:17" class="editable-input text-center w-full bg-transparent"></td>
-                                        <td class="py-2 px-2"><input type="text" value="長官致詞" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                                    </tr>
-                                    <tr class="hover:bg-emerald-50/50 bg-amber-50/50 transition">
-                                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:17-10:20" class="editable-input text-center w-full bg-transparent"></td>
-                                        <td class="py-2 px-2"><input type="text" value="行銷儀式" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                                    </tr>
-                                    <tr class="hover:bg-emerald-50/50 transition">
-                                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:20-10:25" class="editable-input text-center w-full bg-transparent"></td>
-                                        <td class="py-2 px-2"><input type="text" value="大合照" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                                    </tr>
-                                    <tr class="hover:bg-emerald-50/50 bg-amber-50/50 transition">
-                                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:25-10:30" class="editable-input text-center w-full bg-transparent"></td>
-                                        <td class="py-2 px-2"><input type="text" value="媒體聯訪" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                                    </tr>
-                                    <tr class="hover:bg-emerald-50/50 transition">
-                                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:30-11:00" class="editable-input text-center w-full bg-transparent"></td>
-                                        <td class="py-2 px-2"><input type="text" value="記者會結束" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <!-- 增刪流程功能（溝通工具小幫手） -->
-                        <div class="mt-3 flex justify-end gap-1.5 no-print">
-                            <button onclick="addFlowRow()" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-xs px-2.5 py-1 rounded transition flex items-center gap-1">
-                                <i class="fa-solid fa-plus-circle"></i> 新增流程行
-                            </button>
-                            <button onclick="removeFlowRow()" class="bg-rose-100 hover:bg-rose-200 text-rose-800 text-xs px-2.5 py-1 rounded transition flex items-center gap-1">
-                                <i class="fa-solid fa-minus-circle"></i> 刪除最後一行
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 內頁底部插畫浮水印標記 -->
-                    <div class="mt-4 flex justify-between items-center text-xs text-gray-400">
-                        <span>*本內頁背景及插圖於定案後全彩輸出</span>
-                        <span class="border border-dashed border-gray-300 p-1 rounded bg-white/60">[插畫佔位: 農夫挑梨]</span>
-                    </div>
+                <!-- 內頁下方：第一版本流程表 -->
+                <div class="ysd-watermark bg-inner-pale p-10 min-h-[380px] relative">
+                    <h3 class="font-black text-emerald-800/60 mb-4 text-sm tracking-wide relative z-10"><i class="fa-regular fa-clock mr-1"></i> 活動流程表</h3>
+                    <table class="w-full text-sm relative z-10 bg-white/70 rounded-xl p-4 shadow-sm border border-gray-100 overflow-hidden" id="flow-table">
+                        <tbody id="flow-tbody" class="divide-y divide-gray-100 block p-2">
+                            <tr class="flex py-2"><td class="w-28 text-gray-400 font-mono">09:30 - 10:00</td><td class="flex-grow font-bold text-gray-700">嘉賓報到、媒體接待</td></tr>
+                            <tr class="flex py-2"><td class="w-28 text-gray-400 font-mono">10:00 - 10:05</td><td class="flex-grow font-bold text-gray-700">熱力開場秀-在地鼓舞展演</td></tr>
+                            <tr class="flex py-2"><td class="w-28 text-gray-400 font-mono">10:05 - 10:15</td><td class="flex-grow font-bold text-gray-700">主席致詞、長官與貴賓介紹</td></tr>
+                            <tr class="flex py-2"><td class="w-28 text-gray-400 font-mono">10:15 - 10:35</td><td class="flex-grow font-bold text-gray-700">2025豐水梨評鑑成果頒裝典禮</td></tr>
+                            <tr class="flex py-2"><td class="w-28 text-gray-400 font-mono">10:35 - 10:50</td><td class="flex-grow font-bold text-gray-700">啟動儀式：甘甜登場大合照</td></tr>
+                            <tr class="flex py-2"><td class="w-28 text-gray-400 font-mono">10:50 - 11:30</td><td class="flex-grow font-bold text-gray-700">優質果品品嚐會、媒體大聯訪</td></tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- ==================== TAB 3: 信封套 ==================== -->
+        <!-- Tab 3: 信封 (單位與地址電話上移，書寫處置中還原) -->
         <div id="tab-envelope" class="tab-content hidden">
             <div class="mb-6 text-center">
                 <span class="bg-pink-100 text-pink-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">粉紅色精緻信封套 (中式信封橫式印刷版面)</span>
-                <p class="text-sm text-gray-500 mt-1">寄件人地址、郵資戳記、及右下方主題文字全可修改。</p>
+                <p class="text-sm text-gray-500 mt-1">地址資訊置頂，收件人書寫框置中。</p>
             </div>
 
-            <div class="max-w-[700px] mx-auto bg-white border border-pink-200 shadow-2xl rounded-2xl overflow-hidden">
-                <div class="watermark-bg-pink p-8 min-h-[400px] flex flex-col justify-between">
-                    <!-- 信封上部：寄件人資訊 & 印刷品戳記 -->
-                    <div class="flex justify-between items-start">
-                        <!-- 寄件人地址 -->
-                        <div class="space-y-1 bg-white/80 backdrop-blur-sm p-4 rounded-xl border border-pink-200 max-w-sm">
-                            <div class="flex items-center gap-2 mb-1">
-                                <input type="text" id="env-sender-name" value="三灣鄉農會" class="editable-input-pink text-red-600 font-extrabold text-2xl tracking-widest bg-transparent w-full">
-                                <input type="text" id="env-invite-tag" value="敬邀" class="editable-input-pink text-red-600 font-bold text-lg bg-transparent w-16">
-                            </div>
-                            <div class="text-xs text-gray-600 space-y-1">
-                                <div class="flex">
-                                    <span class="font-bold text-gray-500 w-12">地址：</span>
-                                    <input type="text" id="env-sender-addr" value="352苗栗縣三灣鄉三灣村中正路176號" class="editable-input-pink bg-transparent w-full">
-                                </div>
-                                <div class="flex">
-                                    <span class="font-bold text-gray-500 w-12">電話：</span>
-                                    <input type="text" id="env-sender-tel" value="037-831007" class="editable-input-pink bg-transparent w-full">
-                                </div>
-                            </div>
+            <div class="max-w-[700px] mx-auto bg-[#ffe4e6] p-8 shadow-2xl rounded-sm ysd-watermark flex flex-col justify-between min-h-[400px]">
+                
+                <!-- 上部：寄件人資訊上移 & 郵資戳記 -->
+                <div class="flex justify-between items-start w-full relative z-10">
+                    <!-- 寄件人資訊 (往上移) -->
+                    <div class="space-y-1 bg-white/40 backdrop-blur-sm p-4 rounded-lg border border-red-200/30 max-w-sm">
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="env-sender-name" value="三灣鄉農會" class="text-red-600 text-2xl font-black bg-transparent border-none outline-none w-48">
+                            <span class="text-red-600 text-lg font-bold">敬邀</span>
                         </div>
-
-                        <!-- 印刷品郵資戳 -->
-                        <div class="border-2 border-red-500 text-red-600 font-bold px-3 py-1.5 rounded text-sm tracking-widest flex items-center justify-center bg-white/90">
-                            <input type="text" id="env-postage-tag" value="印刷品" class="text-center bg-transparent w-16 font-bold outline-none">
+                        <div class="text-red-700/80 text-xs space-y-1">
+                            <input type="text" id="env-sender-addr" value="352苗栗縣三灣鄉三灣村中正路176號" class="w-full bg-transparent border-b border-red-300/40 pb-1 outline-none">
+                            <input type="text" id="env-sender-tel" value="電話：037-831007" class="w-full bg-transparent outline-none">
                         </div>
                     </div>
 
-                    <!-- 信封中間：收件人空白書寫區 (視覺輔助線) -->
-                    <div class="my-6 border border-dashed border-gray-300 rounded-lg p-4 bg-white/40 max-w-md mx-auto w-full text-center">
-                        <span class="text-gray-400 text-sm font-semibold">【 郵寄收件人地址 / 姓名書寫處 】</span>
+                    <!-- 郵資標籤 -->
+                    <div class="border-2 border-red-500 w-20 h-9 flex items-center justify-center text-red-600 text-[10px] font-bold tracking-widest bg-white/80">
+                        <input type="text" id="env-postage-tag" value="印刷品" class="text-center w-full bg-transparent border-none outline-none">
                     </div>
+                </div>
 
-                    <!-- 信封下部：大主題與插畫 -->
-                    <div class="flex flex-col sm:flex-row justify-between items-end gap-4 mt-4">
-                        <!-- 左下插畫佔位 -->
-                        <div class="text-xs text-gray-400 border border-dashed border-pink-300 p-1 rounded bg-white/60">
-                            [插畫佔位: 採梨農夫與豐收箱]
-                        </div>
-
-                        <!-- 右下大字主題 -->
-                        <div class="bg-white/80 backdrop-blur-sm px-6 py-3 rounded-xl border border-pink-200 text-right shadow-sm w-full sm:w-auto">
-                            <input type="text" id="env-main-title" value="2025苗栗水果節" class="editable-input-pink text-center sm:text-right text-emerald-800 font-extrabold text-xl tracking-wider bg-transparent w-full">
-                            <input type="text" id="env-sub-title" value="甘甜蜜意豐貓梨" class="editable-input-pink text-center sm:text-right text-emerald-600 font-bold text-md tracking-widest bg-transparent w-full mt-1">
-                        </div>
+                <!-- 中部：【郵寄收件人地址 / 姓名書寫處】置中 (還原第一版位置) -->
+                <div class="my-8 border-2 border-dashed border-red-300/60 rounded-lg p-6 bg-white/30 max-w-md mx-auto w-full text-center relative z-10">
+                    <div class="text-xs text-red-500 font-bold mb-2 tracking-wider">
+                        <i class="fa-regular fa-envelope mr-1"></i> 【 郵寄收件人地址 / 姓名書寫處 】
+                    </div>
+                    <div class="space-y-2 mt-3">
+                        <div class="h-3 w-4/5 bg-red-400/10 rounded-full mx-auto"></div>
+                        <div class="h-5 w-full bg-red-400/10 rounded-full mx-auto"></div>
+                        <div class="h-3 w-1/2 bg-red-400/10 rounded-full mx-auto"></div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 客戶定稿資訊複製/導出彈窗 (預設隱藏) -->
-        <div id="modal-export" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
-            <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto">
-                <div class="flex justify-between items-center border-b border-gray-200 pb-3">
-                    <h3 class="text-lg font-bold text-emerald-800 flex items-center gap-2">
-                        <i class="fa-solid fa-file-export"></i> 已為您生成「定稿文字清單」
-                    </h3>
-                    <button onclick="toggleModal('modal-export', false)" class="text-gray-400 hover:text-gray-600 text-xl"><i class="fa-solid fa-times"></i></button>
-                </div>
-                <p class="text-xs text-gray-500">您可以直接點擊下方按鈕複製，並直接將複製的內容發送給設計團隊。這可以百分之百避免打字錯誤！</p>
+        <!-- 3D 虛擬成品示意區 -->
+        <div id="final-mockup-section" class="hidden mt-20 border-t border-gray-300 pt-16 no-print">
+            <h2 class="text-2xl font-black text-center mb-12 text-gray-800 tracking-tight">雅世代創意工作群 - 3D 虛擬成品示意</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-5xl mx-auto">
                 
-                <textarea id="export-textarea" class="w-full h-80 p-4 border border-gray-300 rounded-xl font-mono text-sm bg-gray-50 text-gray-700 focus:outline-none" readonly></textarea>
-                
-                <div class="flex justify-end gap-2 pt-2">
-                    <button onclick="toggleModal('modal-export', false)" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition">
-                        返回修改
-                    </button>
-                    <button onclick="copyToClipboard()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-bold transition flex items-center gap-1.5">
-                        <i class="fa-solid fa-copy"></i> 複製全部文字
-                    </button>
+                <!-- 3D 外頁摺疊 -->
+                <div class="flex flex-col items-center">
+                    <span class="text-xs font-bold text-gray-400 mb-6 tracking-widest bg-gray-200/60 px-3 py-1 rounded-full">外頁摺疊 (3D 翻轉)</span>
+                    <div class="scene">
+                        <div class="card-3d">
+                            <div class="card-face card-bottom shadow-md flex items-center justify-center text-[10px] p-4 text-gray-400 bg-[#fdfbf7] font-medium">
+                                封底單位資訊預覽
+                            </div>
+                            <div class="card-face card-front shadow-lg flex items-center justify-center border-t-4 border-emerald-600 overflow-hidden bg-[#fdfbf7]">
+                                <div class="text-center p-2">
+                                    <div class="text-[8px] text-pink-500 font-bold mb-1">INVITATION</div>
+                                    <div class="text-[11px] font-black text-emerald-800 tracking-tighter">甘甜蜜意豐貓梨</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="mt-20 text-[11px] text-blue-600 bg-blue-50 px-2 py-1 rounded"><i class="fa-solid fa-hand-pointer mr-1"></i> 滑鼠移入模擬翻開外頁</p>
                 </div>
+
+                <!-- 內頁平面 -->
+                <div class="flex flex-col items-center">
+                    <span class="text-xs font-bold text-gray-400 mb-6 tracking-widest bg-gray-200/60 px-3 py-1 rounded-full">內頁展開結構</span>
+                    <div class="w-[180px] h-[260px] bg-[#f7fafc] shadow-md border border-gray-200 p-3 flex flex-col justify-between rounded-sm">
+                        <div class="h-1/2 border-b border-dashed border-gray-200 flex flex-col justify-center items-center text-[9px] text-gray-400 space-y-1">
+                            <span class="font-bold text-emerald-800">邀請主文 / 長官名單</span>
+                        </div>
+                        <div class="h-1/2 flex items-center justify-center text-[9px] text-gray-500 font-bold">
+                            精細活動流程表
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 信封平面 -->
+                <div class="flex flex-col items-center">
+                    <span class="text-xs font-bold text-gray-400 mb-6 tracking-widest bg-gray-200/60 px-3 py-1 rounded-full">粉紅信封與書寫處</span>
+                    <div class="w-[260px] h-[150px] bg-[#ffe4e6] shadow-md border border-rose-200 rounded-sm p-3 flex flex-col justify-between">
+                        <!-- 上部左右寄件與郵資 -->
+                        <div class="flex justify-between items-start w-full text-[7px] text-red-500 scale-90 origin-top-left">
+                            <div>三灣鄉農會<br>電話：037-831007</div>
+                            <div class="border border-red-400 px-1 py-0.5">印刷品</div>
+                        </div>
+                        <!-- 中央收件處 -->
+                        <div class="border border-dashed border-red-300 bg-white/20 rounded text-[7px] text-red-400 p-1 w-4/5 mx-auto text-center">
+                            收件人書寫區 (置中)
+                        </div>
+                        <div class="text-[9px] text-red-600 font-black self-start">三灣鄉農會 敬邀</div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
     </main>
 
-    <!-- 頁尾宣告 -->
-    <footer class="bg-gray-800 text-gray-400 text-center py-6 text-xs mt-12 border-t border-gray-700 no-print">
-        <div class="max-w-6xl mx-auto px-4 space-y-2">
-            <p>© 邀請卡設計排版與內容溝通輔助系統 - 文字溝通專用板模</p>
-            <p class="text-gray-500">本系統專為提升客戶與設計師的溝通效率設計。版面背景已套用防呆浮水印，文字定案後將產出正式印刷用 AI / PDF 檔。</p>
-        </div>
-    </footer>
+    <!-- 固定操作鈕：一鍵定稿 -->
+    <div class="fixed bottom-8 right-8 flex flex-col gap-3 no-print">
+        <button onclick="finalizeAndShowMockup()" class="bg-gradient-to-r from-emerald-600 to-blue-600 text-white px-8 py-4 rounded-full font-black shadow-2xl transition transform hover:scale-105 flex items-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> 一鍵定稿並生成立體示意
+        </button>
+    </div>
 
-    <!-- JS 邏輯控制 -->
     <script>
-        // 切換分頁邏輯
+        // 分頁切換
         function switchTab(tabId) {
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.add('hidden');
-                tab.classList.remove('block');
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.add('hidden'));
+            document.getElementById(tabId).classList.remove('hidden');
+            document.querySelectorAll('.tab-btn').forEach(b => {
+                b.classList.remove('border-blue-600', 'text-blue-600');
+                b.classList.add('border-transparent', 'text-gray-500');
             });
-            
-            const activeTab = document.getElementById(tabId);
-            activeTab.classList.remove('hidden');
-            activeTab.classList.add('block');
-
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('bg-white', 'text-emerald-700', 'shadow-sm');
-                btn.classList.add('text-gray-600', 'hover:text-emerald-600');
-            });
-
-            const activeBtn = document.getElementById(`btn-${tabId}`);
-            activeBtn.classList.add('bg-white', 'text-emerald-700', 'shadow-sm');
-            activeBtn.classList.remove('text-gray-600', 'hover:text-emerald-600');
+            document.getElementById('btn-' + tabId).classList.add('border-blue-600', 'text-blue-600');
         }
 
-        // 動態新增聯名長官
+        // 旋轉方向切換
+        function toggleRotation() {
+            const body = document.body;
+            if (body.classList.contains('is-editing')) {
+                body.classList.remove('is-editing');
+                body.classList.add('is-preview');
+            } else {
+                body.classList.remove('is-preview');
+                body.classList.add('is-editing');
+            }
+        }
+
+        // 自由拖曳元件
+        const draggables = document.querySelectorAll('.draggable');
+        draggables.forEach(el => {
+            let isDragging = false;
+            let offset = { x: 0, y: 0 };
+
+            el.addEventListener('mousedown', (e) => {
+                if(e.target.tagName === 'INPUT') return; 
+                isDragging = true;
+                offset.x = e.clientX - el.offsetLeft;
+                offset.y = e.clientY - el.offsetTop;
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (!isDragging) return;
+                el.style.left = (e.clientX - offset.x) + 'px';
+                el.style.top = (e.clientY - offset.y) + 'px';
+            });
+
+            document.addEventListener('mouseup', () => isDragging = false);
+        });
+
+        // 動態增加長官欄位
         function addOfficer() {
             const container = document.getElementById('officers-container');
-            const newOfficer = document.createElement('div');
-            newOfficer.className = "flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item";
-            newOfficer.innerHTML = `
-                <input type="text" value="職稱職位" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                <input type="text" value="長官姓名" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-            `;
-            container.appendChild(newOfficer);
+            const div = document.createElement('div');
+            div.className = "officer-item border-b border-gray-200/60 flex gap-1";
+            div.innerHTML = `<input type="text" value="新職稱" class="w-32 text-gray-400 text-xs outline-none"><input type="text" value="長官姓名" class="font-bold text-sm text-blue-900 outline-none">`;
+            container.appendChild(div);
         }
 
-        // 動態刪除聯名長官 (保留至少1個)
-        function removeOfficer() {
-            const container = document.getElementById('officers-container');
-            if (container.children.length > 1) {
-                container.removeChild(container.lastElementChild);
-            }
-        }
-
-        // 新增記者會流程列
-        function addFlowRow() {
-            const tbody = document.getElementById('flow-tbody');
-            const rowCount = tbody.children.length;
-            const isAltRow = rowCount % 2 === 0;
-            const tr = document.createElement('tr');
-            tr.className = `hover:bg-emerald-50/50 ${isAltRow ? 'bg-amber-50/50' : ''} transition`;
-            tr.innerHTML = `
-                <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="新時間段" class="editable-input text-center w-full bg-transparent"></td>
-                <td class="py-2 px-2"><input type="text" value="新活動單元" class="editable-input text-center font-medium w-full bg-transparent"></td>
-            `;
-            tbody.appendChild(tr);
-        }
-
-        // 刪除最後一行流程
-        function removeFlowRow() {
-            const tbody = document.getElementById('flow-tbody');
-            if (tbody.children.length > 1) {
-                tbody.removeChild(tbody.lastElementChild);
-            }
-        }
-
-        // 開啟/關閉 Modal 視窗
-        function toggleModal(modalId, show) {
-            const modal = document.getElementById(modalId);
-            if (show) {
-                modal.classList.remove('hidden');
-            } else {
-                modal.classList.add('hidden');
-            }
-        }
-
-        // 收集並匯出所有修改過的資料
-        function exportData() {
-            let output = `=========================================\n`;
-            output += `【 邀請卡客戶確認定稿文字檔 】\n`;
-            output += `系統生成時間: ${new Date().toLocaleString()}\n`;
-            output += `=========================================\n\n`;
-
-            output += `◆ 一、邀請卡【外頁/封面】文字配置\n`;
-            output += `-----------------------------------------\n`;
-            output += `外頁標題: ${document.getElementById('outer-back-title').value}\n`;
-            output += `主標題: ${document.getElementById('outer-main-title').value}\n`;
-            output += `副標題: ${document.getElementById('outer-sub-title').value}\n`;
-            output += `指導單位: ${document.getElementById('outer-guide-org').value}\n`;
-            output += `主辦單位: ${document.getElementById('outer-main-org').value}\n`;
-            output += `協辦單位: ${document.getElementById('outer-co-org').value}\n`;
-            output += `廣告標記: ${document.getElementById('outer-ad-tag').value}\n\n`;
-
-            output += `◆ 二、邀請卡【內頁/主文與長官】文字配置\n`;
-            output += `-----------------------------------------\n`;
-            output += `致邀時間: ${document.getElementById('inner-invitation-head').value}\n`;
-            output += `致邀地點: ${document.getElementById('inner-invitation-loc').value}\n`;
-            output += `活動主名 1: ${document.getElementById('inner-event-name-1').value}\n`;
-            output += `活動副名 2: ${document.getElementById('inner-event-name-2').value}\n`;
-            output += `敬邀標語: ${document.getElementById('inner-welcome-tag').value}\n`;
-            output += `敬邀徽章: ${document.getElementById('inner-invite-badge').value}\n\n`;
-
-            output += `◆ 三、聯名長官名單 (動態名冊)\n`;
-            output += `-----------------------------------------\n`;
-            const officerItems = document.querySelectorAll('#officers-container .officer-item');
-            officerItems.forEach((item, index) => {
-                const inputs = item.querySelectorAll('input');
-                if (inputs.length >= 2) {
-                    output += `長官 ${String(index + 1).padStart(2, '0')}: [${inputs[0].value}] - ${inputs[1].value}\n`;
-                }
-            });
-            output += `\n`;
-
-            output += `◆ 四、活動/記者會流程表\n`;
-            output += `-----------------------------------------\n`;
-            output += `流程標題: ${document.getElementById('inner-flow-title').value}\n`;
+        // 一鍵定稿
+        function finalizeAndShowMockup() {
+            document.body.classList.remove('is-editing');
+            document.body.classList.add('is-preview');
             
-            const rows = document.querySelectorAll('#flow-tbody tr');
-            rows.forEach((row, index) => {
-                const inputs = row.querySelectorAll('input');
-                if (inputs.length >= 2) {
-                    output += ` [項目 ${index + 1}]  時間: ${inputs[0].value.padEnd(12, ' ')} |  單元: ${inputs[1].value}\n`;
-                }
-            });
-            output += `\n`;
-
-            output += `◆ 五、信封套文字配置\n`;
-            output += `-----------------------------------------\n`;
-            output += `寄件單位: ${document.getElementById('env-sender-name').value} (${document.getElementById('env-invite-tag').value})\n`;
-            output += `寄件地址: ${document.getElementById('env-sender-addr').value}\n`;
-            output += `連絡電話: ${document.getElementById('env-sender-tel').value}\n`;
-            output += `郵資別標記: ${document.getElementById('env-postage-tag').value}\n`;
-            output += `信封右下主名: ${document.getElementById('env-main-title').value}\n`;
-            output += `信封右下副名: ${document.getElementById('env-sub-title').value}\n`;
-            output += `=========================================`;
-
-            document.getElementById('export-textarea').value = output;
-            toggleModal('modal-export', true);
+            const mockup = document.getElementById('final-mockup-section');
+            mockup.classList.remove('hidden');
+            mockup.scrollIntoView({ behavior: 'smooth' });
         }
 
-        // 複製至剪貼簿
-        function copyToClipboard() {
-            const textarea = document.getElementById('export-textarea');
-            textarea.select();
-            document.execCommand('copy');
-            
-            const btn = event.currentTarget;
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = `<i class="fa-solid fa-check"></i> 已成功複製！`;
-            btn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
-            btn.classList.add('bg-blue-600');
-            
-            setTimeout(() => {
-                btn.innerHTML = originalHTML;
-                btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
-                btn.classList.remove('bg-blue-600');
-                toggleModal('modal-export', false);
-            }, 1500);
-        }
-
-        // 清空所有欄位
         function clearAllFields() {
-            if (confirm('您確定要清空目前畫面上所有的文字內容嗎？')) {
-                document.querySelectorAll('input[type="text"]').forEach(input => {
-                    input.value = '';
-                });
-            }
-        }
-
-        // 恢復預設範本
-        function loadTemplate(type) {
-            if (type === 'default') {
-                document.getElementById('outer-back-title').value = "誠 摯 邀 請 INVITATION";
-                document.getElementById('outer-main-title').value = "甘甜蜜意豐貓梨";
-                document.getElementById('outer-sub-title').value = "2025苗栗水果節";
-                document.getElementById('outer-guide-org').value = "苗栗縣政府、苗栗縣三灣鄉公所";
-                document.getElementById('outer-main-org').value = "三灣鄉農會";
-                document.getElementById('outer-co-org').value = "三灣鄉民代表會、鄉內各機關團體";
-                
-                document.getElementById('inner-invitation-head').value = "謹訂於民國114年7月22日（二）上午10點";
-                document.getElementById('inner-invitation-loc').value = "假 苗栗縣政府大廳 舉辦";
-                document.getElementById('inner-event-name-1').value = "114年度苗栗縣豐水梨果品評鑑競賽頒獎暨行銷活動";
-                document.getElementById('inner-event-name-2').value = "2025苗栗水果節 甘甜蜜意豐貓梨";
-                document.getElementById('inner-welcome-tag').value = "敬祈撥冗 蒞臨指導";
-                document.getElementById('inner-invite-badge').value = "敬邀";
-
-                // 重組預設 8 位長官名冊
-                const container = document.getElementById('officers-container');
-                container.innerHTML = `
-                    <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                        <input type="text" value="苗栗縣縣長" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                        <input type="text" value="鍾東錦" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                    </div>
-                    <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                        <input type="text" value="三灣鄉鄉長" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                        <input type="text" value="李運光" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                    </div>
-                    <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                        <input type="text" value="立法委員" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                        <input type="text" value="邱鎮軍" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                    </div>
-                    <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                        <input type="text" value="三灣鄉農會理事長" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                        <input type="text" value="賴元鳳" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                    </div>
-                    <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                        <input type="text" value="苗栗縣議會議長" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                        <input type="text" value="李文斌" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                    </div>
-                    <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                        <input type="text" value="三灣鄉農會常務監事" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                        <input type="text" value="廖盛榮" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                    </div>
-                    <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                        <input type="text" value="三灣鄉民代表會主席" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                        <input type="text" value="邱騰森" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                    </div>
-                    <div class="flex items-center gap-1 border-b border-dashed border-emerald-100/50 pb-1 officer-item">
-                        <input type="text" value="三灣鄉農會總幹事" class="editable-input text-emerald-800 font-medium text-xs bg-transparent w-24 flex-shrink-0 outline-none">
-                        <input type="text" value="謝杏玲" class="editable-input text-blue-800 font-bold text-sm bg-transparent w-full outline-none">
-                    </div>
-                `;
-
-                // 恢復流程
-                document.getElementById('inner-flow-title').value = "記者會流程";
-                const tbody = document.getElementById('flow-tbody');
-                tbody.innerHTML = `
-                    <tr class="hover:bg-emerald-50/50 bg-amber-50/50 transition">
-                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:00-10:02" class="editable-input text-center w-full bg-transparent"></td>
-                        <td class="py-2 px-2"><input type="text" value="主持人開場" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                    </tr>
-                    <tr class="hover:bg-emerald-50/50 transition">
-                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:02-10:07" class="editable-input text-center w-full bg-transparent"></td>
-                        <td class="py-2 px-2"><input type="text" value="開場表演" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                    </tr>
-                    <tr class="hover:bg-emerald-50/50 bg-amber-50/50 transition">
-                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:07-10:12" class="editable-input text-center w-full bg-transparent"></td>
-                        <td class="py-2 px-2"><input type="text" value="介紹貴賓" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                    </tr>
-                    <tr class="hover:bg-emerald-50/50 transition">
-                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:12-10:17" class="editable-input text-center w-full bg-transparent"></td>
-                        <td class="py-2 px-2"><input type="text" value="長官致詞" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                    </tr>
-                    <tr class="hover:bg-emerald-50/50 bg-amber-50/50 transition">
-                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:17-10:20" class="editable-input text-center w-full bg-transparent"></td>
-                        <td class="py-2 px-2"><input type="text" value="行銷儀式" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                    </tr>
-                    <tr class="hover:bg-emerald-50/50 transition">
-                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:20-10:25" class="editable-input text-center w-full bg-transparent"></td>
-                        <td class="py-2 px-2"><input type="text" value="大合照" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                    </tr>
-                    <tr class="hover:bg-emerald-50/50 bg-amber-50/50 transition">
-                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:25-10:30" class="editable-input text-center w-full bg-transparent"></td>
-                        <td class="py-2 px-2"><input type="text" value="媒體聯訪" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                    </tr>
-                    <tr class="hover:bg-emerald-50/50 transition">
-                        <td class="py-2 px-2 border-r border-emerald-50"><input type="text" value="10:30-11:00" class="editable-input text-center w-full bg-transparent"></td>
-                        <td class="py-2 px-2"><input type="text" value="記者會結束" class="editable-input text-center font-medium w-full bg-transparent"></td>
-                    </tr>
-                `;
-
-                // 恢復信封
-                document.getElementById('env-sender-name').value = "三灣鄉農會";
-                document.getElementById('env-invite-tag').value = "敬邀";
-                document.getElementById('env-sender-addr').value = "352苗栗縣三灣鄉三灣村中正路176號";
-                document.getElementById('env-sender-tel').value = "037-831007";
-                document.getElementById('env-postage-tag').value = "印刷品";
-                document.getElementById('env-main-title').value = "2025苗栗水果節";
-                document.getElementById('env-sub-title').value = "甘甜蜜意豐貓梨";
+            if(confirm("確定要重置所有欄位嗎？")) {
+                location.reload();
             }
         }
     </script>
+
 </body>
 </html>
