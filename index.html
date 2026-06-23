@@ -10,11 +10,7 @@
     
     <style>
         body { font-family: 'Noto Sans TC', sans-serif; background-color: #f1f5f9; }
-        
-        /* 雅世代 Logo 品牌樣式 */
         .ysd-logo { font-family: 'Noto Sans TC', sans-serif; font-weight: 900; letter-spacing: -1px; }
-
-        /* 全域/區域底圖淡化示意 */
         .ysd-watermark { position: relative; overflow: hidden; }
         .ysd-watermark::before {
             content: "YSD 雅世代創意工作群"; position: absolute; top: 50%; left: 50%;
@@ -22,38 +18,15 @@
             font-size: 2.5rem; font-weight: 900; letter-spacing: 4px;
             color: rgba(0, 0, 0, 0.02); white-space: nowrap; pointer-events: none; z-index: 0;
         }
-
-        /* 內外頁指定淺底色 */
-        .bg-outer-pale { background-color: #fdfbf7; } /* 柔和米白/象牙色 */
-        .bg-inner-pale { background-color: #f7fafc; } /* 乾淨清爽淡藍白 */
-
-        /* 主視覺區塊淺色邊框說明 */
-        .main-visual-hint {
-            border: 2px dashed rgba(16, 185, 129, 0.12);
-            background: rgba(16, 185, 129, 0.01);
-        }
-        .main-visual-text {
-            color: rgba(16, 185, 129, 0.25); font-weight: 700; letter-spacing: 2px;
-        }
-
-        /* 旋轉邏輯：一開始呈現相反列印方向，聚焦時自動轉正 */
-        .outer-top-half { 
-            transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); 
-            transform-origin: center; 
-            transform: rotate(180deg); /* 預設倒置以符合實體印刷折疊 */
-        }
+        .bg-outer-pale { background-color: #fdfbf7; }
+        .bg-inner-pale { background-color: #f7fafc; }
+        .main-visual-hint { border: 2px dashed rgba(16, 185, 129, 0.12); background: rgba(16, 185, 129, 0.01); }
+        .main-visual-text { color: rgba(16, 185, 129, 0.25); font-weight: 700; letter-spacing: 2px; }
+        .outer-top-half { transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: center; transform: rotate(180deg); }
+        .is-editing .outer-top-half:focus-within { transform: rotate(0deg); }
+        .is-preview .outer-top-half { transform: rotate(180deg); }
         
-        /* 編輯模式下，若點擊點選其中文字框進行輸入（focus-within），自動翻轉回正向（0度） */
-        .is-editing .outer-top-half:focus-within { 
-            transform: rotate(0deg); 
-        } 
-        
-        /* 列印預覽模式下強制維持倒置 */
-        .is-preview .outer-top-half { 
-            transform: rotate(180deg); 
-        } 
-
-        /* 調整後的 Flex 置中容器，移除硬編碼重疊 */
+        /* 左右上下置中容器 */
         .flex-centered-container {
             display: flex;
             flex-direction: column;
@@ -66,96 +39,27 @@
             z-index: 10;
         }
 
-        /* 可移動物件 */
         .draggable { cursor: move; position: relative; z-index: 10; transition: border 0.2s; border: 1px dashed transparent; }
         .draggable:hover { border-color: #3b82f6; background: rgba(59, 130, 246, 0.05); }
         .draggable:active { cursor: grabbing; }
-
         .editable-input { background: transparent; border: none; outline: none; width: 100%; }
-
-        /* ==================== 強化版立體 CSS 3D 模擬 (17.5 x 13.5 摺疊比例調整) ==================== */
-        .scene-3d {
-            perspective: 1200px;
-            width: 100%;
-            height: 560px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: radial-gradient(circle, #f8fafc 0%, #e2e8f0 100%);
-            border-radius: 1rem;
-            border: 1px solid #e2e8f0;
-        }
         
-        /* 整個3D卡片旋轉容器 (依 17.5 : 27 比例重繪：寬320px、高494px，單面高247px) */
-        .card-container-3d {
-            width: 320px;
-            height: 494px;
-            position: relative;
-            transform-style: preserve-3d;
-            transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-            transform: rotateX(20deg) rotateY(-20deg);
-        }
-
-        /* 3D 摺疊下半部 (底座) - 247px */
-        .card-bottom-half {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            height: 247px;
-            transform-style: preserve-3d;
-            border-radius: 0 0 8px 8px;
-        }
-
-        /* 3D 摺疊上半部 (掀蓋關節) - 247px */
-        .card-top-half {
-            position: absolute;
-            top: 0;
-            width: 100%;
-            height: 247px;
-            transform-style: preserve-3d;
-            transform-origin: bottom center; /* 以中間折線為軸旋轉 */
-            transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-            border-radius: 8px 8px 0 0;
-        }
-
-        /* 雙面卡片共同樣式：標準 3D 貼合 */
-        .face {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            backface-visibility: hidden;
-            -webkit-backface-visibility: hidden; /* 相容 Safari */
-            border: 1px solid rgba(0, 0, 0, 0.08);
-            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.02);
-        }
-
-        /* 上半部正面：內頁致邀文字 */
-        .top-inside-face {
-            background-color: #f7fafc;
-            transform: rotateX(0deg) translateZ(1px); 
-        }
-        /* 上半部反面：外頁誠摯邀請 */
-        .top-outside-face {
-            background-color: #fdfbf7;
-            transform: rotateY(180deg) rotateZ(180deg) translateZ(1.1px); 
-        }
-
-        /* 下半部正面：內頁流程表 */
-        .bottom-inside-face {
-            background-color: #f7fafc;
-            transform: rotateX(0deg) translateZ(1px);
-        }
-        /* 下半部反面：外頁指導主協辦單位 */
-        .bottom-outside-face {
-            background-color: #fdfbf7;
-            transform: rotateY(180deg) translateZ(1.1px);
-        }
-
+        /* ==================== 強化版立體 CSS 3D 模擬 ==================== */
+        .scene-3d { perspective: 1200px; width: 100%; height: 560px; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #f8fafc 0%, #e2e8f0 100%); border-radius: 1rem; border: 1px solid #e2e8f0; }
+        .card-container-3d { width: 320px; height: 494px; position: relative; transform-style: preserve-3d; transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); transform: rotateX(20deg) rotateY(-20deg); }
+        .card-bottom-half { position: absolute; bottom: 0; width: 100%; height: 247px; transform-style: preserve-3d; border-radius: 0 0 8px 8px; }
+        .card-top-half { position: absolute; top: 0; width: 100%; height: 247px; transform-style: preserve-3d; transform-origin: bottom center; transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1); border-radius: 8px 8px 0 0; }
+        .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 1px solid rgba(0, 0, 0, 0.08); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.02); }
+        .top-inside-face { background-color: #f7fafc; transform: rotateX(0deg) translateZ(1px); }
+        .top-outside-face { background-color: #fdfbf7; transform: rotateY(180deg) rotateZ(180deg) translateZ(1.1px); }
+        .bottom-inside-face { background-color: #f7fafc; transform: rotateX(0deg) translateZ(1px); }
+        .bottom-outside-face { background-color: #fdfbf7; transform: rotateY(180deg) translateZ(1.1px); }
         @media print { .no-print { display: none; } }
     </style>
 </head>
 <body class="min-h-screen text-gray-800 flex flex-col is-editing">
 
+    <!-- 頂部列 -->
     <header class="bg-white border-b border-gray-200 shadow-sm sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
             <div class="flex items-center gap-4">
@@ -180,6 +84,7 @@
         </div>
     </header>
 
+    <!-- 操作提示說明 -->
     <div class="bg-emerald-50 border-b border-emerald-100 text-emerald-800 px-4 py-3 no-print">
         <div class="max-w-5xl mx-auto flex items-start gap-3 text-sm">
             <span class="flex-shrink-0 bg-emerald-500 text-white w-5 h-5 rounded-full flex items-center justify-center font-bold">!</span>
@@ -193,6 +98,7 @@
         </div>
     </div>
 
+    <!-- 分頁導覽 -->
     <nav class="bg-white border-b border-gray-200 sticky top-[65px] z-40 no-print">
         <div class="max-w-3xl mx-auto px-4 flex justify-around">
             <button onclick="switchTab('tab-outer')" id="btn-tab-outer" class="tab-btn py-4 px-6 border-b-2 border-blue-600 text-blue-600 font-bold">1. 外頁(封面/封底)</button>
@@ -203,25 +109,25 @@
 
     <main class="flex-grow max-w-6xl w-full mx-auto p-4 md:p-8">
         
+        <!-- Tab 1: 外頁 -->
         <div id="tab-outer" class="tab-content block">
-            <div class="mb-4 text-center">
-                <span class="bg-amber-100 text-amber-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
-                    <i class="fa-solid fa-ruler-combined mr-1"></i> 實體成品規格：對摺後 寬 17.5 cm × 高 13.5 cm (展開：17.5 × 27 cm)
-                </span>
-            </div>
-            
-            <div class="w-[420px] mx-auto border border-gray-300 shadow-2xl rounded-sm overflow-hidden">
+            <!-- 已在此處移除「實體成品規格：對摺後...」的提示說明文字列 -->
+            <div class="w-[420px] mx-auto border border-gray-300 shadow-2xl rounded-sm overflow-hidden mt-4">
                 
+                <!-- 外頁上方：封底/摺疊上半區 -->
                 <div class="outer-top-half ysd-watermark bg-outer-pale main-visual-hint h-[324px] relative overflow-hidden">
                     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <span class="main-visual-text text-lg">活動主視覺（背面區）</span>
                     </div>
 
+                    <!-- 使用 Flexbox 置中容器包覆，確保誠摯邀請與主標置中且不重疊 -->
                     <div class="flex-centered-container">
+                        <!-- 可移動：誠摯邀請 -->
                         <div class="draggable p-2 w-[370px]" id="drag-invitation">
                             <input type="text" id="outer-back-title" value="誠 摯 邀 請 INVITATION" class="editable-input text-center text-pink-600 font-bold text-lg tracking-widest">
                         </div>
 
+                        <!-- 可移動：主題框 -->
                         <div class="draggable bg-white/95 backdrop-blur-sm p-4 border border-amber-100 shadow-md rounded-lg w-[370px]" id="drag-title-box">
                             <input type="text" id="outer-main-title" value="甘甜蜜意豐貓梨" class="editable-input text-center text-emerald-800 font-black text-3xl tracking-tighter mb-1">
                             <input type="text" id="outer-sub-title" value="2025苗栗水果節" class="editable-input text-center text-emerald-600 font-bold text-base tracking-widest">
@@ -229,12 +135,14 @@
                     </div>
                 </div>
 
+                <!-- 中央折線 -->
                 <div class="relative h-px bg-dashed border-t border-dashed border-gray-400 no-print flex justify-center items-center z-30">
                     <span class="absolute bg-white text-[9px] text-gray-400 font-mono px-3 py-0.5 rounded-full border border-gray-200 shadow-sm">
                         <i class="fa-solid fa-scissors mr-1"></i> 中央折線 (實體對摺處)
                     </span>
                 </div>
 
+                <!-- 外頁下方：封面/主要正面區 -->
                 <div class="ysd-watermark bg-outer-pale main-visual-hint h-[324px] p-6 flex flex-col justify-between relative">
                     <div class="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <span class="main-visual-text text-lg">活動主視覺（正面區）</span>
@@ -242,6 +150,7 @@
 
                     <div></div> 
                     
+                    <!-- 單位資訊 -->
                     <div class="bg-white/95 backdrop-blur-sm p-3.5 rounded-lg space-y-1.5 text-xs border border-gray-100 relative z-10 shadow-sm">
                         <div class="flex"><span class="font-bold w-16 text-gray-500">指導單位</span><input type="text" id="outer-guide-org" value="苗栗縣政府、三灣鄉公所" class="editable-input text-gray-700"></div>
                         <div class="flex"><span class="font-bold w-16 text-gray-500">主辦單位</span><input type="text" id="outer-main-org" value="三灣鄉農會" class="editable-input text-gray-700"></div>
@@ -251,8 +160,10 @@
             </div>
         </div>
 
+        <!-- Tab 2: 內頁展面 -->
         <div id="tab-inner" class="tab-content hidden">
             <div class="w-[420px] mx-auto border border-gray-300 shadow-2xl rounded-sm overflow-hidden">
+                <!-- 內頁上方：致邀內文 -->
                 <div class="ysd-watermark bg-inner-pale p-6 h-[324px] flex flex-col justify-center relative">
                     <div class="text-center space-y-2 relative z-10 scale-95 origin-center">
                         <input type="text" id="inner-invitation-head" value="謹訂於民國114年7月22日(星期二) 上午10點" class="editable-input text-emerald-800 font-bold text-center text-sm">
@@ -263,6 +174,7 @@
                         <input type="text" id="inner-welcome-tag" value="敬祈撥冗 蒞臨指導" class="editable-input text-pink-600 font-bold tracking-widest text-center text-sm">
                     </div>
                     
+                    <!-- 內頁長官名單 -->
                     <div id="officers-container" class="grid grid-cols-2 gap-x-3 gap-y-1 mt-4 relative z-10 bg-white/60 p-2.5 rounded-lg border border-gray-100 scale-95 origin-center">
                         <div class="officer-item border-b border-gray-200/60 flex gap-0.5"><input type="text" value="苗栗縣縣長" class="w-24 text-gray-500 text-[10px] outline-none"><input type="text" value="鍾東錦" class="font-bold text-xs text-blue-900 outline-none"></div>
                         <div class="officer-item border-b border-gray-200/60 flex gap-0.5"><input type="text" value="三灣鄉鄉長" class="w-24 text-gray-500 text-[10px] outline-none"><input type="text" value="李運光" class="font-bold text-xs text-blue-900 outline-none"></div>
@@ -278,10 +190,12 @@
                     </div>
                 </div>
 
+                <!-- 內頁中央折線說明 -->
                 <div class="relative h-px bg-dashed border-t border-dashed border-gray-300 no-print flex justify-center items-center">
                     <span class="absolute bg-gray-50 text-[9px] text-gray-400 font-mono px-2 py-0.5 rounded-full">內頁折線</span>
                 </div>
 
+                <!-- 內頁下方：活動流程表 -->
                 <div class="ysd-watermark bg-inner-pale p-6 h-[324px] relative overflow-hidden flex flex-col justify-center">
                     <h3 class="font-black text-emerald-800/60 mb-2 text-xs tracking-wide relative z-10"><i class="fa-regular fa-clock mr-1"></i> 活動流程表</h3>
                     <table class="w-full text-xs relative z-10 bg-white/70 rounded-xl p-2 shadow-sm border border-gray-100 scale-95 origin-center" id="flow-table">
@@ -298,6 +212,7 @@
             </div>
         </div>
 
+        <!-- Tab 3: 信封 -->
         <div id="tab-envelope" class="tab-content hidden">
             <div class="mb-4 text-center">
                 <span class="bg-pink-100 text-pink-800 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
@@ -336,6 +251,7 @@
             </div>
         </div>
 
+        <!-- 3D 模擬示意 -->
         <div id="final-mockup-section" class="mt-20 border-t border-gray-300 pt-16 no-print">
             <h2 class="text-2xl font-black text-center mb-4 text-gray-800 tracking-tight">邀請卡 3D 模擬示意</h2>
             <p class="text-center text-sm text-gray-500 mb-8">
@@ -361,7 +277,9 @@
                 <div class="scene-3d w-full max-w-4xl shadow-lg">
                     <div class="card-container-3d" id="main-3d-card">
                         
+                        <!-- 3D 上半部 -->
                         <div class="card-top-half" id="main-3d-top">
+                            <!-- 內頁上半正面 -->
                             <div class="face top-inside-face p-6 flex flex-col justify-center text-center">
                                 <div class="scale-[0.8]">
                                     <p class="text-[9px] font-bold text-emerald-700 mockup-inner-inv-head">謹訂於民國114年7月22日...</p>
@@ -373,6 +291,7 @@
                                     <div class="grid grid-cols-2 gap-1 mt-4 text-[8px] border-t border-dashed border-gray-200 pt-2" id="mockup-officers"></div>
                                 </div>
                             </div>
+                            <!-- 外頁上半反面 -->
                             <div class="face top-outside-face p-6 flex flex-col justify-center items-center">
                                 <div class="text-center">
                                     <p class="text-[9px] text-pink-500 font-extrabold tracking-widest mockup-outer-back-title">誠摯邀請 INVITATION</p>
@@ -384,13 +303,16 @@
                             </div>
                         </div>
 
+                        <!-- 3D 下半部 -->
                         <div class="card-bottom-half">
+                            <!-- 內頁下半正面 -->
                             <div class="face bottom-inside-face p-6 flex flex-col justify-center">
                                 <div class="scale-[0.75]">
                                     <p class="text-[8px] font-black text-emerald-800/40 mb-1">活動流程表</p>
                                     <div id="mockup-flow" class="space-y-1"></div>
                                 </div>
                             </div>
+                            <!-- 外頁下半反面 -->
                             <div class="face bottom-outside-face p-6 flex flex-col justify-end">
                                 <div class="bg-white/80 p-2 rounded text-[7px] space-y-0.5 border border-gray-100">
                                     <p><span class="text-gray-400 font-bold">指導單位：</span><span class="mockup-outer-guide">苗栗縣政府...</span></p>
@@ -404,12 +326,6 @@
             </div>
         </div>
     </main>
-
-    <header class="no-print">
-        <script>
-            // 此處保留以利排版，主邏輯於下方 script
-        </script>
-    </header>
 
     <footer class="bg-white border-t border-gray-200 py-6 no-print">
         <div class="max-w-7xl mx-auto px-4 text-center">
@@ -447,7 +363,7 @@
             }
         }
 
-        // 自由拖曳元件 (此處微調：移除 CSS 拖曳造成的殘留位移干擾，確保彈性拖曳仍正常運作)
+        // 自由拖曳元件
         const draggables = document.querySelectorAll('.draggable');
         draggables.forEach(el => {
             let isDragging = false;
@@ -458,7 +374,6 @@
                 isDragging = true;
                 el.style.position = 'absolute';
                 const rect = el.getBoundingClientRect();
-                const parentRect = el.parentElement.getBoundingClientRect();
                 offset.x = e.clientX - rect.left;
                 offset.y = e.clientY - rect.top;
                 el.style.zIndex = 100;
@@ -500,7 +415,6 @@
             const card = document.getElementById('main-3d-card');
             const topHalf = document.getElementById('main-3d-top');
             
-            // 重設按鈕樣式
             document.querySelectorAll('[id^="btn-3d-"]').forEach(btn => {
                 btn.classList.remove('bg-white', 'shadow-sm', 'text-gray-800');
                 btn.classList.add('text-gray-600');
@@ -522,7 +436,6 @@
 
         // 同步內容到 3D 模擬器
         function syncToMockup() {
-            // 外頁
             document.querySelector('.mockup-outer-back-title').innerText = document.getElementById('outer-back-title').value;
             document.querySelector('.mockup-outer-main-title').innerText = document.getElementById('outer-main-title').value;
             document.querySelector('.mockup-outer-sub-title').innerText = document.getElementById('outer-sub-title').value;
@@ -530,14 +443,12 @@
             document.querySelector('.mockup-outer-main-org').innerText = document.getElementById('outer-main-org').value;
             document.querySelector('.mockup-outer-co-org').innerText = document.getElementById('outer-co-org').value;
 
-            // 內頁
             document.querySelector('.mockup-inner-inv-head').innerText = document.getElementById('inner-invitation-head').value;
             document.querySelector('.mockup-inner-inv-loc').innerText = document.getElementById('inner-invitation-loc').value;
             document.querySelector('.mockup-inner-event-1').innerText = document.getElementById('inner-event-name-1').value;
             document.querySelector('.mockup-inner-event-2').innerText = document.getElementById('inner-event-name-2').value;
             document.querySelector('.mockup-inner-welcome').innerText = document.getElementById('inner-welcome-tag').value;
 
-            // 長官連動
             const mockupOfficers = document.getElementById('mockup-officers');
             mockupOfficers.innerHTML = '';
             document.querySelectorAll('#officers-container .officer-item').forEach(item => {
@@ -549,7 +460,6 @@
                 }
             });
 
-            // 流程表連動
             const mockupFlow = document.getElementById('mockup-flow');
             mockupFlow.innerHTML = '';
             document.querySelectorAll('#flow-tbody tr').forEach(row => {
@@ -560,7 +470,13 @@
             });
         }
 
-        // 初始化監聽
+        function clearAllFields() {
+            if(confirm("確定要重設所有欄位嗎？")) {
+                document.querySelectorAll('input').forEach(i => i.value = '');
+                syncToMockup();
+            }
+        }
+
         document.querySelectorAll('input').forEach(input => {
             input.addEventListener('input', syncToMockup);
         });
