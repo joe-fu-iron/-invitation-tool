@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <style>
-        body { font-family: 'Noto Sans TC', sans-serif; background-color: #f7fafc; }
+        body { font-family: 'Noto Sans TC', sans-serif; background-color: #3b82f6; }
         .ysd-logo { font-family: 'Noto Sans TC', sans-serif; font-weight: 900; letter-spacing: -1px; }
         .ysd-watermark { position: relative; overflow: hidden; }
         .ysd-watermark::before {
@@ -18,8 +18,8 @@
             font-size: 2.5rem; font-weight: 900; letter-spacing: 4px;
             color: rgba(0, 0, 0, 0.02); white-space: nowrap; pointer-events: none; z-index: 0;
         }
-        .bg-outer-pale { background-color:#f7fafc; }
-        .bg-inner-pale { background-color: #f7fafc; }
+        .bg-outer-pale { background-color:#f3efe0; }
+        .bg-inner-pale { background-color:#f3efe0; }
         .main-visual-hint { border: 2px dashed rgba(16, 185, 129, 0.12); background: rgba(16, 185, 129, 0.01); }
         .main-visual-text { color: rgba(16, 185, 129, 0.25); font-weight: 700; letter-spacing: 2px; }
         .outer-top-half { transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1); transform-origin: center; transform: rotate(180deg); }
@@ -50,10 +50,10 @@
         .card-bottom-half { position: absolute; bottom: 0; width: 100%; height: 247px; transform-style: preserve-3d; border-radius: 0 0 8px 8px; transition: all 1.2s; }
         .card-top-half { position: absolute; top: 0; width: 100%; height: 247px; transform-style: preserve-3d; transform-origin: bottom center; transition: transform 1.2s cubic-bezier(0.4, 0, 0.2, 1), width 1.2s, height 1.2s; border-radius: 8px 8px 0 0; }
         .face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; border: 1px solid rgba(0, 0, 0, 0.08); box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.02); }
-        .top-inside-face { background-color: #f7fafc; transform: rotateX(0deg) translateZ(1px); }
-        .top-outside-face { background-color:#f7fafc; transform: rotateY(180deg) rotateZ(180deg) translateZ(1.1px); }
-        .bottom-inside-face { background-color: #f7fafc; transform: rotateX(0deg) translateZ(1px); }
-        .bottom-outside-face { background-color:#f7fafc; transform: rotateY(180deg) translateZ(1.1px); }
+        .top-inside-face { background-color: #f3efe0; transform: rotateX(0deg) translateZ(1px); }
+        .top-outside-face { background-color:#f3efe0; transform: rotateY(180deg) rotateZ(180deg) translateZ(1.1px); }
+        .bottom-inside-face { background-color: #f3efe0; transform: rotateX(0deg) translateZ(1px); }
+        .bottom-outside-face { background-color:#f3efe0; transform: rotateY(180deg) translateZ(1.1px); }
         @media print { .no-print { display: none; } }
 
         /* ==================== 直式摺疊特殊樣式覆寫 (左右對摺) ==================== */
